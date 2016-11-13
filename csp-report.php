@@ -14,14 +14,16 @@
 /* First create an incoming webhook here: https://api.slack.com/incoming-webhooks */
 /* Replace $webhookUrl with your webhook url */
 $webhookUrl = "https://hooks.slack.com/services/XXXXXXXXX/XXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX";
-$channel = "#csp";
+/* Replace with your @username or #channel */
+$channel = "@edwin";
 /* End config */
 
 
 $data = json_decode(file_get_contents('php://input'), true);
 
 if ($data == null) {
-    echo "<h1>Content Security Policy report tool</h1>";
+    echo "<h1>Content Security Policy report tool</h1>\n";
+    echo "<p>See <a href='https://github.com/edwinm/csp-report'>csp-report repository</a></p>\n";
     die;
 }
 
@@ -30,15 +32,15 @@ $data = $data["csp-report"];
 //$report = json_encode($data["csp-report"]);
 $report = "";
 $documentUri = "";
-$effectiveDirective = "";
+$violatedDirective = "";
 
 foreach ($data as $directive => $value) {
     switch ($directive) {
         case "document-uri":
             $documentUri = $value;
             break;
-        case "effective-directive":
-            $effectiveDirective = $value;
+        case "violated-directive":
+            $violatedDirective = $value;
             break;
         default:
             $report .= "*$directive*:\n$value\n";
@@ -46,13 +48,15 @@ foreach ($data as $directive => $value) {
     }
 }
 
+$report .= "*(user-agent)*\n" . $_SERVER['HTTP_USER_AGENT'] . "\n";
+
 $dataString = <<<EOT
 {
     "text": "*Content Security Policy report*",
     "channel": "$channel",
     "attachments": [
         {
-            "text": "*document-uri*:\n$documentUri\n*effective-directive*:\n$effectiveDirective\n$report",
+            "text": "*document-uri*:\n$documentUri\n*violated-directive*:\n$violatedDirective\n$report",
             "color": "#7CD197",
             "mrkdwn_in": ["text", "pretext"]
         }
